@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - ".package-ready"
 
 permissions:
   contents: write
@@ -15,12 +17,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract audited package
+      - name: Rebuild and extract audited package
         shell: bash
         run: |
           set -euo pipefail
-          unzip -o wojsko-discord-bot-final-audited-seg13-hotfix.zip -d .
+          cat .package-parts/part-* > /tmp/package.b64
+          base64 -d /tmp/package.b64 > /tmp/package.zip
+          unzip -t /tmp/package.zip
+          unzip -o /tmp/package.zip -d .
           rm -f wojsko-discord-bot-final-audited-seg13-hotfix.zip
+          rm -rf .package-parts
+          rm -f .package-ready
           rm -f .github/workflows/materialize.yml
           rmdir .github/workflows 2>/dev/null || true
           rmdir .github 2>/dev/null || true
