@@ -1,0 +1,114 @@
+SEGMENT 9 — PEŁNY AUDYT KOŃCOWY PO WSZYSTKICH POPRAWKACH
+
+Przeprowadzono ponowny audyt całego bot.py, już po zmianach z Segmentów 1–8.
+
+Dodatkowo znalezione i naprawione w Segmencie 9:
+1. Dwie definicje inventory_history_text. Druga nadpisywała pierwszą.
+   Funkcja nie miała callsite, więc oba martwe duplikaty zostały usunięte.
+2. Audit bankObligations filtrował źródło wyłącznie po createdAt.
+   Edycja starego zobowiązania wykonana dziś mogła zniknąć z audytu.
+   Teraz czytane są createdAt oraz updatedAt i dokumenty są deduplikowane po ID.
+3. Audit bankPlannedProposals filtrował tylko po createdAt.
+   Decyzja dziś dla starej propozycji mogła nie wejść do raportu.
+   Teraz czytane są createdAt oraz decidedAt.
+4. Audit może wykryć przekroczenie source_limit: pobiera limit+1 i zwraca jawny błąd
+   zamiast po cichu pokazywać niepełny raport.
+5. Przycisk Saldo wymusza świeży odczyt mimo technicznego cache.
+6. Dwa debugowe print() w Audit Logs zastąpiono logger.exception().
+7. Test regresji starego zobowiązania / starej propozycji: 6/6 OK.
+
+Końcowa kontrola całego pliku:
+- brak duplikatów top-level
+- brak print() debugowych
+- brak bare except
+- brak mutable default args
+- brak jawnych coroutine calls bez await
+- brak blocking time.sleep/subprocess/requests wewnątrz async
+- brak delete_after przekazywanego do problematycznych ścieżek Discord webhook
+- brak rekurencji send_private_followup
+- discord.Client + CommandTree, bez commands.Bot
+- persistent views zarejestrowane
+- custom_id unikalne
+- TextInput posiadają max_length
+- Firestore stream/get/commit mają deadline
+- krytyczne saldo jest świeże
+- audit obsługuje createdAt/updatedAt/decidedAt/paidAt
+- brak hardcoded Discord token/private key
+
+Weryfikacja dokumentacji API:
+- oficjalna dokumentacja Firestore potwierdza timeout na DocumentReference.get/set/update,
+  Query.stream i commit.
+- implementacja nadal NIE używa delete_after na interaction.followup.send, ponieważ
+  rzeczywiste środowisko VPS wcześniej zgłosiło TypeError dla tej ścieżki; cleanup
+  wykonywany jest jawnie przez delete_original_response/WebhookMessage.delete.
+
+Stan:
+- ast.parse: OK
+- py_compile: OK
+- nierozwiązane problemy wykryte przez pełny audyt: 0
+
+Pozostające ograniczenia architektoniczne spoza samego bot.py:
+- wspólna atomowość salda WWW ↔ Discord wymaga zmiany obu klientów,
+- pełny append-only audit operacji wykonywanych przez WWW wymaga zmian w stronie WWW,
+- ostateczny runtime smoke test musi zostać wykonany na VPS z faktycznym discord.py,
+  Firebase Admin i prawdziwymi uprawnieniami kanału.
+
+
+SEGMENT 8 — TESTY REGRESYJNE / FUZZ / SYMULACJE
+
+Wykonane serie:
+A. Funkcje czyste i wartości graniczne
+   - pierwszy przebieg: 50 testów, znaleziono 1 błąd
+   - błąd: naturalny zapis `2 st. 3` nie był akceptowany
+   - poprawka: parser obsługuje `st.` i `szt.`
+   - retest: 29/29 OK
+
+B. Inwarianty Discord / security / persistent views / Firestore deadlines
+   - 75 testów
+   - pierwszy przebieg wykazał 1 false-positive testu ochrony @everyone
+   - logika była poprawna, ale funkcję has_any_role przepisano czytelniej
+   - retest ochrony @everyone: OK
+
+C. Integracyjne testy krytycznych mutacji na emulatorze Firestore
+   - 38/38 OK
+   - sprawdzono:
+     * Magazyn add + retry + brak podwójnego zapisu
+     * odmowę wydania ponad stan
+     * Brama wejście + retry + duplikat osoby
+     * Brama wyjście + retry
+     * Skrytka brak środków
+     * wpłata + retry bez podwójnego księgowania
+     * zatwierdzenie propozycji + retry + deterministyczne zobowiązanie
+     * brak podwójnego powiadomienia przy retry
+     * odrzucenie propozycji
+     * oznaczenie zaległości jako opłacone + retry
+
+D. Fuzz i skrajne wartości
+   - pierwszy przebieg: 15 testów, znaleziono 2 błędy prezentacji
+   - ujemny stan był pokazywany jako `-1 st. 63 szt.`
+   - wartość > FIRESTORE_INT_MAX była prezentowana jak poprawny stan
+   - poprawka: format_qty zwraca `⚠️ nieprawidłowy stan`
+   - retest + 5000 losowych wejść parserów: OK
+
+E. Regresje znanych wcześniejszych awarii
+   - brak `delete_after` przekazywanego do Webhook.send
+   - send_private_followup nie wywołuje samego siebie
+   - brak commands.Bot i ostrzeżenia Message Content Intent
+   - cleanup prywatnych wiadomości pozostaje aktywny
+   - retry operacji finansowych i bramy pozostaje przed kontrolami stanu
+   - Firestore deadlines i semaphore pozostają aktywne
+
+Łącznie w głównych przebiegach:
+- co najmniej 146 deterministycznych testów/inwariantów
+- dodatkowo 5000 losowych wejść fuzz dla parse_money / parse_quantity
+- wszystkie znalezione regresje zostały poprawione i ponownie sprawdzone
+
+Ograniczenie środowiska testowego:
+- nie wykonano połączenia z prawdziwym Discord API ani produkcyjnym Firebase.
+- testy integracyjne używały kontrolowanego emulatora Firestore w pamięci.
+- prawdziwy smoke test na VPS zostanie wykonany dopiero po przygotowaniu finalnego pliku.
+
+Stan po Segmencie 8:
+- ast.parse: OK
+- py_compile: OK
+- krytyczne kontrole regresji: wszystkie OK
