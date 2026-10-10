@@ -1,0 +1,14 @@
+Wojsko Stolicy Discord Bot — Final Audited
+Build date: 2026-10-08
+Build: Segment 13 preflight hotfix
+bot.py SHA256: 49eef5d45867a89c25633586cf1181d1ef4cd9c05b567733fd37767dc047a42f
+Python syntax: OK
+Deployment scripts: OK
+Systemd unit syntax: OK
+minecraft_items.json: 1505 unique items
+Secrets included: NO
+Preflight Firestore probe: fixed (valid document ID)
+Staging deploy: included
+Automatic code rollback on install/service failure: included
+Manual rollback tool: included
+Operational diagnostics: included
