@@ -21,16 +21,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .package-parts/part-* > /tmp/package.b64
+          {
+            cat .package-parts/part-00
+            cat .package-parts/part-01
+            cat .package-parts/part-02
+            cat .package-parts/part-03
+            cat .package-parts/part-04
+            cat .package-parts/part-05
+            cat .package-parts/part-06
+            cat .package-parts/part-07
+            cat .package-parts/part-08
+            cat .package-parts/part-09
+            cat .package-parts/part-10
+            cat .package-parts/part-11
+            cat .package-fix/part-12-0
+            cat .package-fix/part-12-1
+            cat .package-fix/part-13-0
+            cat .package-fix/part-13-1
+            cat .package-fix/part-14-0
+            cat .package-fix/part-14-1
+            cat .package-parts/part-15
+          } > /tmp/package.b64
           base64 -d /tmp/package.b64 > /tmp/package.zip
+          echo "db5d11a5f3c0dd594f12980b22625b587f8fd2678938e3a30a9deccd7c1d2ca3  /tmp/package.zip" | sha256sum -c -
           unzip -t /tmp/package.zip
           unzip -o /tmp/package.zip -d .
           rm -f wojsko-discord-bot-final-audited-seg13-hotfix.zip
-          rm -rf .package-parts
+          rm -rf .package-parts .package-fix
           rm -f .package-ready
-          rm -f .github/workflows/materialize.yml
-          rmdir .github/workflows 2>/dev/null || true
-          rmdir .github 2>/dev/null || true
 
       - name: Commit exact package contents
         shell: bash
