@@ -1,0 +1,74 @@
+WOJSKO STOLICY — SMOKE TEST PO WDROŻENIU
+
+1. STAN USŁUGI
+systemctl status wojsko-bot --no-pager -l
+
+Oczekiwane:
+- Active: active (running)
+- brak tracebacków
+- brak warningu o Message Content Intent
+
+2. OSTATNIE LOGI
+journalctl -u wojsko-bot -n 100 --no-pager -l
+
+Oczekiwane wpisy:
+- konfiguracja ról wczytana
+- bot zalogowany
+- synchronizacja komend potwierdzona albo czytelny błąd sieci
+
+3. TESTY TYLKO DO ODCZYTU NA DISCORDZIE
+- /ile -> jeden zwykły przedmiot
+- /ile -> kilka przedmiotów
+- /ile -> wariant [zaklęty]
+- Magazyn -> Sprawdź stan
+- Brama -> Obecni
+- Brama -> Historia
+- Skrytka -> Saldo
+- Skrytka -> Historia
+- Audit Logs -> każdy panel
+- Audit Logs -> użytkownik + dzisiaj / wczoraj / 7 dni
+
+4. TEST UPRAWNIEŃ
+Z konta bez ról:
+- stan magazynu: ma działać
+- saldo: ma działać
+- propozycja wydatku: ma działać
+- Przyjmij/Wydaj: odmowa
+- Wejście/Wyjście: odmowa
+- wpłata/wypłata: odmowa
+- Audit Logs: odmowa
+
+Minister:
+- odczyt historii Magazynu/Bramy/Skrytki: działa
+- mutacje: odmowa
+
+5. TEST PRYWATNYCH ODPOWIEDZI
+- wykonaj /ile albo kliknij Saldo
+- odpowiedź ma być ephemeral
+- odczekaj około 120 s
+- odpowiedź powinna zostać usunięta przez bota
+- stały panel na kanale ma pozostać
+
+6. TEST MAŁEJ MUTACJI, JEŚLI MOŻNA BEZPIECZNIE W PRODUKCJI
+Magazyn:
+- przyjmij małą ilość testowego przedmiotu
+- sprawdź stan
+- wydaj dokładnie tę samą ilość
+- sprawdź historię i Audit Logs
+
+Nie wykonuj testowej transakcji finansowej, jeśli Skrytka zawiera realne dane RP.
+
+7. RESTART
+systemctl restart wojsko-bot
+sleep 3
+systemctl status wojsko-bot --no-pager -l
+
+Po restarcie:
+- stare stałe panele nadal reagują
+- slash commands działają
+- nie trzeba publikować paneli ponownie
+
+8. JEŚLI COŚ NIE DZIAŁA
+journalctl -u wojsko-bot -n 150 --no-pager -l
+
+Do diagnozy zachowaj cały traceback, nie tylko ostatnią linię.
