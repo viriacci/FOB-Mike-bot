@@ -1,0 +1,40 @@
+name: Materialize package
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract audited package
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -o wojsko-discord-bot-final-audited-seg13-hotfix.zip -d .
+          rm -f wojsko-discord-bot-final-audited-seg13-hotfix.zip
+          rm -f .github/workflows/materialize.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+
+      - name: Commit exact package contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Materialize audited Segment 13 source"
+          git push
